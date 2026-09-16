@@ -45,8 +45,11 @@ Anything your code passes explicitly wins over the role. So pass nothing. And do
 "use the key if set, otherwise the role" — that branch is how a key quietly comes back later.
 
 **3. Policies come from measurement, not imagination.**
-Actions from the code, resource ARNs from config and CloudTrail. Start narrow: a denial names
-exactly what to add, while an over-broad policy tells you nothing and protects nothing.
+Actions from the code, resource ARNs from config and CloudTrail. Build the policy by picking
+statements from [templates/policy-snippets.md](templates/policy-snippets.md) for the services the
+measurement showed — and no others. Plenty of workloads need **no policy at all**; that is a result,
+not a mistake. Start narrow: a denial names exactly what to add, while an over-broad policy tells
+you nothing and protects nothing.
 
 **4. Ship a way to check.**
 A diagnostics endpoint or command that prints the calling identity plus a pass/fail per service

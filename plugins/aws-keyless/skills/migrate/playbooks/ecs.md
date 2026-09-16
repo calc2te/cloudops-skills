@@ -41,12 +41,15 @@ split per service even while many services share one role. Combine that with the
 
 ## Step 2 — Create the role and a narrow policy (attached to nothing yet → zero risk)
 
-Start from [terraform-role.tf](../templates/terraform-role.tf). Non-negotiables:
+Start from [terraform-role.tf](../templates/terraform-role.tf) — role and trust only — then add
+statements from [policy-snippets.md](../templates/policy-snippets.md), **one per service the
+measurement actually showed**. If the service calls nothing, it needs no policy at all: a role with
+an empty policy is a valid and common outcome. Non-negotiables:
 
 - Trust policy restricted to `ecs-tasks.amazonaws.com` **with `aws:SourceAccount` and `aws:SourceArn`**
   (prevents the confused-deputy problem).
 - No `*FullAccess` managed policies. No default `Resource: "*"`.
-- Actions from the code, resource ARNs from config/measurement.
+- Actions from the code, resource ARNs from config/measurement. Never paste a snippet "just in case".
 - Start narrow. Denials are visible and cheap to fix; over-permission is invisible.
 
 Verify with the simulator before going near the service — assert **both** what must be allowed and

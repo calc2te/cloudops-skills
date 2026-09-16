@@ -3,8 +3,12 @@
 Answers two questions on one screen: *who am I calling AWS as* and *does each call work*.
 Add it before the migration and you get a clean before/after (user/... -> assumed-role/...).
 
+HOW TO ADAPT: the CHECKS list below is a menu. Keep `identity` — it is the whole point — and
+then keep only the checks for services this app actually uses. Delete the rest; a check for a
+service you do not use is noise at best and a reason to over-grant the policy at worst.
+
 Guard: non-production only + a token (X-Diag-Token header or ?token=). Anything else 404s.
-Cost: one 1-token model reply plus one overwrite of a fixed S3 key.
+Cost: whatever the checks you keep cost. Keep them trivial (1-token replies, HEAD-style calls).
 Note: ?token= lands in access logs — rotate the token or delete the endpoint when you are done.
 
 Credentials are never specified here. Showing whatever the SDK default chain resolves *is* the test.
@@ -18,60 +22,90 @@ import boto3
 from fastapi import APIRouter, Request
 from starlette.responses import HTMLResponse, JSONResponse
 
-from app.config import settings  # environment, app_diag_token, s3_bucket, s3_region
+from app.config import settings  # environment, diag token, and this app's resource names
 
 router = APIRouter()
 
-_MODEL_ID = "global.anthropic.claude-haiku-4-5-20251001-v1:0"
-_S3_KEY = "diag/aws-check.txt"
+
+# ── checks ───────────────────────────────────────────────────────────────────
+# Each returns a small dict (or string) shown in the result. Raise on failure.
+
+def check_identity():
+    """Always keep this one: it names the principal the SDK resolved."""
+    return boto3.client("sts").get_caller_identity()["Arn"]
 
 
-def _run(checks: dict, name: str, fn) -> None:
-    started = time.monotonic()
-    try:
-        detail = fn()  # run first: array/dict literals evaluate top-down, so timing must wrap the call
-        checks[name] = {"ok": True, "ms": int((time.monotonic() - started) * 1000), "detail": detail}
-    except Exception as e:
-        err = getattr(e, "response", {}).get("Error", {}) if hasattr(e, "response") else {}
-        checks[name] = {
-            "ok": False,
-            "ms": int((time.monotonic() - started) * 1000),
-            "error": err.get("Code") or type(e).__name__,
-            "message": (err.get("Message") or str(e))[:300],
-        }
+def check_s3():
+    s3 = boto3.client("s3", region_name=settings.s3_region)
+    key = "diag/aws-check.txt"                      # fixed key: overwritten, never accumulates
+    body = str(time.time()).encode()
+    s3.put_object(Bucket=settings.s3_bucket, Key=key, Body=body)
+    got = s3.get_object(Bucket=settings.s3_bucket, Key=key)["Body"].read()
+    return {"bucket": settings.s3_bucket, "roundtrip": got == body}
+
+
+def check_dynamodb():
+    table = boto3.resource("dynamodb", region_name=settings.ddb_region).Table(settings.ddb_table)
+    key = next(k["AttributeName"] for k in table.key_schema if k["KeyType"] == "HASH")
+    # query a partition that cannot exist: proves permission without touching real data
+    from boto3.dynamodb.conditions import Key
+    resp = table.query(KeyConditionExpression=Key(key).eq("__diag__"), Limit=1)
+    return {"table": settings.ddb_table, "count": resp["Count"]}
+
+
+def check_sqs():
+    sqs = boto3.client("sqs", region_name=settings.sqs_region)
+    attrs = sqs.get_queue_attributes(
+        QueueUrl=settings.sqs_url, AttributeNames=["ApproximateNumberOfMessages"]
+    )["Attributes"]
+    return {"queue": settings.sqs_url.rsplit("/", 1)[-1], "messages": attrs.get("ApproximateNumberOfMessages")}
+
+
+def check_bedrock():
+    resp = boto3.client("bedrock-runtime", region_name=settings.bedrock_region).converse(
+        modelId=settings.bedrock_model_id,
+        messages=[{"role": "user", "content": [{"text": "ping"}]}],
+        inferenceConfig={"maxTokens": 1},
+    )
+    return {"model": settings.bedrock_model_id, "stopReason": resp.get("stopReason")}
+
+
+# Keep identity + the ones that apply. Order is display order.
+CHECKS = [
+    ("identity", check_identity),
+    ("s3", check_s3),
+    # ("dynamodb", check_dynamodb),
+    # ("sqs", check_sqs),
+    # ("bedrock", check_bedrock),
+]
+
+# Deliberately not included: anything with side effects a reader would not expect —
+# sending email, publishing to a topic, starting a job. Verify those through the feature itself.
 
 
 def run_checks() -> dict:
-    checks: dict = {}
+    results: dict = {}
 
-    _run(checks, "identity", lambda: boto3.client("sts").get_caller_identity()["Arn"])
-
-    def bedrock():
-        resp = boto3.client("bedrock-runtime", region_name="us-west-2").converse(
-            modelId=_MODEL_ID,
-            messages=[{"role": "user", "content": [{"text": "ping"}]}],
-            inferenceConfig={"maxTokens": 1},
-        )
-        return {"model": _MODEL_ID, "stopReason": resp.get("stopReason")}
-
-    def s3_roundtrip():
-        s3 = boto3.client("s3", region_name=settings.s3_region)
-        body = str(time.time()).encode()
-        s3.put_object(Bucket=settings.s3_bucket, Key=_S3_KEY, Body=body)
-        got = s3.get_object(Bucket=settings.s3_bucket, Key=_S3_KEY)["Body"].read()
-        return {"bucket": settings.s3_bucket, "roundtrip": got == body}
-
-    _run(checks, "bedrock_converse", bedrock)
-    _run(checks, "s3_put_get", s3_roundtrip)
-    # Add only what this service uses (DynamoDB read, SQS attributes, KB retrieve...).
-    # Write checks should overwrite a fixed key or query a nonexistent partition — never dirty real data.
+    for name, fn in CHECKS:
+        started = time.monotonic()
+        try:
+            detail = fn()  # run first: dict literals evaluate top-down, so timing must wrap the call
+            results[name] = {"ok": True, "ms": int((time.monotonic() - started) * 1000), "detail": detail}
+        except Exception as e:
+            err = getattr(e, "response", {}).get("Error", {}) if hasattr(e, "response") else {}
+            results[name] = {
+                "ok": False,
+                "ms": int((time.monotonic() - started) * 1000),
+                "error": err.get("Code") or type(e).__name__,
+                "message": (err.get("Message") or str(e))[:300],
+            }
 
     creds = boto3.Session().get_credentials()
     return {
         "environment": settings.environment,
-        "credential_source": f"{creds.method}" if creds else "none",
-        "all_ok": all(c["ok"] for c in checks.values()),
-        "checks": checks,
+        "credential_source": creds.method if creds else "none",
+        "all_ok": all(r["ok"] for r in results.values()),
+        "checks": results,
     }
 
 

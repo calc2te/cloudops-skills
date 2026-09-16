@@ -6,6 +6,10 @@
  * Answers two questions: *who am I calling AWS as* and *does each call work*.
  * Credentials are never specified here — showing what the SDK default chain resolves is the test.
  *
+ * HOW TO ADAPT: $checks below is a menu. Keep 'identity' — that is the whole point — and keep only
+ * the services this app actually uses. Delete the rest; checking a service you do not use is noise,
+ * and it tempts you into granting permissions the workload never needed.
+ *
  * Two entry points share one class:
  *   - php artisan aws:check   (local; no web server or DB needed — fastest way to check a profile)
  *   - GET /test/aws           (non-production, token required; production 404s)
@@ -34,28 +38,16 @@ class AwsDiagnostics
     {
         $checks = [];
 
+        // Always keep: names the principal the SDK resolved.
         $this->check($checks, 'identity', function () {
-            return (new StsClient(['version' => 'latest', 'region' => config('services.ses.region', '<REGION>')]))
+            return (new StsClient(['version' => 'latest', 'region' => config('services.ses.region', 'us-east-1')]))
                 ->getCallerIdentity()['Arn'];
         });
 
-        $this->check($checks, 'bedrock_invoke', function () {
-            $result = (new BedrockRuntimeClient(['version' => 'latest', 'region' => 'us-west-2']))->invokeModel([
-                'modelId' => 'global.anthropic.claude-haiku-4-5-20251001-v1:0',
-                'contentType' => 'application/json',
-                'body' => json_encode([
-                    'anthropic_version' => 'bedrock-2023-05-31',
-                    'max_tokens' => 1,
-                    'messages' => [['role' => 'user', 'content' => 'ping']],
-                ]),
-            ]);
-
-            return ['status' => $result['@metadata']['statusCode']];
-        });
-
-        $this->check($checks, 's3_put_get', function () {
+        // ── keep only what this app uses ────────────────────────────────────
+        $this->check($checks, 's3', function () {
             $body = Carbon::now()->toIso8601String();
-            Storage::disk('s3')->put('diag/aws-check.txt', $body);
+            Storage::disk('s3')->put('diag/aws-check.txt', $body);   // fixed key, never accumulates
 
             return [
                 'bucket' => config('filesystems.disks.s3.bucket'),
@@ -63,15 +55,23 @@ class AwsDiagnostics
             ];
         });
 
-        $this->check($checks, 'sqs_queue', function () {
-            $sqs = config('queue.connections.sqs');
-            $result = (new SqsClient(['version' => 'latest', 'region' => $sqs['region']]))->getQueueAttributes([
-                'QueueUrl' => rtrim($sqs['prefix'], '/').'/'.$sqs['queue'],
-                'AttributeNames' => ['ApproximateNumberOfMessages'],
-            ]);
+        // $this->check($checks, 'sqs', function () {
+        //     $sqs = config('queue.connections.sqs');
+        //     $result = (new SqsClient(['version' => 'latest', 'region' => $sqs['region']]))->getQueueAttributes([
+        //         'QueueUrl' => rtrim($sqs['prefix'], '/').'/'.$sqs['queue'],
+        //         'AttributeNames' => ['ApproximateNumberOfMessages'],
+        //     ]);
+        //     return ['queue' => $sqs['queue'], 'messages' => $result['Attributes']['ApproximateNumberOfMessages'] ?? null];
+        // });
 
-            return ['queue' => $sqs['queue'], 'messages' => $result['Attributes']['ApproximateNumberOfMessages'] ?? null];
-        });
+        // $this->check($checks, 'bedrock', function () {
+        //     $result = (new BedrockRuntimeClient(['version' => 'latest', 'region' => config('services.bedrock.region')]))
+        //         ->invokeModel([...]);   // keep it to a 1-token reply
+        //     return ['status' => $result['@metadata']['statusCode']];
+        // });
+
+        // Not included on purpose: anything with side effects a reader would not expect —
+        // sending email, publishing to a topic, starting a job. Verify those via the feature itself.
 
         return [
             'environment' => config('app.env'),
