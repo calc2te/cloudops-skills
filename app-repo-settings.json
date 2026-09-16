@@ -1,0 +1,14 @@
+{
+  "_comment": "Copy these two keys into your project's .claude/settings.json and commit them (merge if the file exists). Everyone who opens the repo with Claude Code gets the skill once they trust the folder — no install commands. Replace calc2te/cloudops-skills with the repo hosting the marketplace. Delete _comment.",
+  "extraKnownMarketplaces": {
+    "cloudops-skills": {
+      "source": {
+        "source": "github",
+        "repo": "calc2te/cloudops-skills"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "aws-keyless@cloudops-skills": true
+  }
+}

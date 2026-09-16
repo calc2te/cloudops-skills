@@ -1,0 +1,17 @@
+{
+  "name": "cloudops-skills",
+  "owner": {
+    "name": "cloudops-skills contributors"
+  },
+  "description": "Practical cloud governance skills for Claude Code — credential hygiene, IAM, cost attribution",
+  "plugins": [
+    {
+      "name": "aws-keyless",
+      "source": "./plugins/aws-keyless",
+      "description": "Replace static AWS access keys with roles — ECS, EC2, Lambda, CI, and local development",
+      "version": "0.1.0",
+      "category": "Infrastructure",
+      "keywords": ["aws", "iam", "credentials", "security", "keyless", "ecs", "oidc"]
+    }
+  ]
+}
