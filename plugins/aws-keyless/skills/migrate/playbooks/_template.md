@@ -21,6 +21,10 @@ Prerequisites: [conventions](../reference/conventions.md), [pitfalls](../referen
 > Platform-specific attribution. What identifies this workload in CloudTrail?
 > (ECS: task ID as the session name. EC2: instance id in the session name. Lambda: function name.)
 > Link to [measuring-usage.md](../reference/measuring-usage.md) for the general technique.
+>
+> **Required**: how to find the identity the workload *actually* authenticates as on this platform
+> (the attached role/profile may be bypassed by a key), and how to read that key user's permissions
+> — see measuring-usage.md §2. State what "permissions in effect today" means here.
 
 ## Step 2 — Create the role and a narrow policy (attached to nothing → zero risk)
 

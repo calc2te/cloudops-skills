@@ -34,6 +34,26 @@ See [measuring-usage.md](../reference/measuring-usage.md).
 Access Advisor on the execution role is unusually useful here: functions are small, so
 "services never used in 400 days" is a reliable signal for trimming.
 
+## Step 1b — Which calls bypass the execution role?
+
+The execution role is always attached, so it is easy to assume it is what the function uses. Two
+ways it is not:
+
+- **Reserved variables set explicitly** (`AWS_ACCESS_KEY_ID` in the function's environment) → the
+  whole function runs as that key's user.
+- **App-specific key variables passed to individual clients** (`S3_ACCESS_KEY`, `DDB_KEY`…) → only
+  those clients bypass the role; the rest, including logging, use it. The effective permission set
+  is then the **union** of the role and each key's user.
+
+```bash
+aws lambda get-function-configuration --function-name <FN> \
+  --query 'Environment.Variables' --output json | grep -iE 'key|secret' | sed -E 's/: ".{4}.*/: "…"/'
+grep -rn "aws_access_key_id\|accessKeyId\|credentials" <handler source>
+```
+
+Resolve each key to its IAM user and read that user's permissions
+([measuring-usage.md §2](../reference/measuring-usage.md#2-inspect-the-key-being-replaced--its-permissions-are-what-the-app-runs-with-today)). Phase 1 keeps role ∪ key users; phase 2 narrows from what was used.
+
 ## Step 2 — Role and policy
 
 Trust:

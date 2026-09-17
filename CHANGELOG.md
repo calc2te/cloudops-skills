@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.4.1 — the same check on every platform
+
+0.4.0 fixed the ECS playbook only. The problem is general: whatever identity is attached, a key can
+override it, and the permissions in effect are the key user's.
+
+- `SKILL.md`: new universal rule #2 — *the attached identity is not necessarily the one in use*.
+  Pace table now says "permissions in effect today" instead of "old permissions copied".
+- `playbooks/ec2.md` Step 1b: ask the running process who it is (`sudo -u <app user> aws sts
+  get-caller-identity`); keys in `~/.aws/credentials` or systemd env beat the instance profile, and
+  can differ per OS user.
+- `playbooks/lambda.md` Step 1b: explicit reserved variables make the whole function a key user;
+  app-specific keys make individual clients bypass the role — effective set is the union.
+- `playbooks/github-oidc.md` Step 1b: the CI user *is* today's permission set; find every consumer
+  of a shared key; one OIDC role per repository, starting from what that repo does.
+- `playbooks/local-dev.md` Step 1b: record granted vs. used per person and group people by usage —
+  the union of everyone's permissions is administrator access for all.
+- `playbooks/_template.md`: identifying the effective identity is now a required part of Step 1.
+
 ## 0.4.0 — inspect the key being replaced
 
 Correction to 0.2.0. Two-phase migration said "copy the permissions the workload has today" and

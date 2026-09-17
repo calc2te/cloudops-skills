@@ -29,6 +29,27 @@ aws iam get-access-key-last-used --access-key-id <AKIA…> \
   --query 'AccessKeyLastUsed.[LastUsedDate,ServiceName,Region]' --output text
 ```
 
+## Step 1b — Find out who the instance *really* is
+
+An attached instance profile does not mean the app uses it. The chain is
+**environment variables → `~/.aws/credentials` → … → instance metadata**, so a key anywhere earlier
+wins and the profile is bypassed. And it is per process: two services on one box, running as
+different OS users, can authenticate as two different identities.
+
+Ask the running app, not the instance:
+
+```bash
+# on the instance, as the user the service runs as, with its environment
+sudo -u <APP_USER> -E aws sts get-caller-identity
+systemctl show <SERVICE> -p Environment        # env vars injected by systemd
+sudo cat ~<APP_USER>/.aws/credentials | grep -E '^\[|aws_access_key_id' | sed -E 's/(= ....).*(....)$/\1…\2/'
+```
+
+If the answer is `user/<NAME>`, the permissions in effect are **that IAM user's**, not the instance
+profile's. Read them — attached, inline, groups, boundary — and compare granted with used
+([measuring-usage.md §2](../reference/measuring-usage.md#2-inspect-the-key-being-replaced--its-permissions-are-what-the-app-runs-with-today)). That set is what phase 1 keeps and what phase 2 narrows from.
+Repeat for every OS user that runs something.
+
 ## Step 2 — Role and policy
 
 Same policy body as [terraform-role.tf](../templates/terraform-role.tf); only the trust differs:

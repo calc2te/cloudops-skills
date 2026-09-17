@@ -35,7 +35,7 @@ Getting it wrong is how a careful migration still breaks production.
 | | **One step** | **Two phases** |
 |---|---|---|
 | when | small workload, few AWS services, no scheduled jobs you cannot exercise, easy to observe | business-critical, many services, cron/queue workers, monthly jobs, revenue or email paths |
-| identity switch | new role with a **narrow** policy | new role with the **old permissions copied** |
+| identity switch | new role with a **narrow** policy | new role with the **permissions in effect today** — usually the key's IAM user's, not the attached role's |
 | permission narrowing | at the same time | after an observation window that covers the longest schedule |
 | risk | a missed permission breaks something | none from permissions in phase 1 |
 
@@ -84,30 +84,36 @@ purpose.
 Attach the role, deploy, confirm it starts — *then* strip the key and deploy again. Reversed, the
 workload runs with no credentials at all.
 
-**2. The SDK finds credentials by itself — stop handing them over.**
+**2. The attached identity is not necessarily the one in use.**
+A task role, instance profile or execution role can be attached while the app authenticates with a
+key — and the key wins. On every platform, find what the workload *actually* runs as, then read
+**that** principal's permissions. For a key, it is its IAM user's policies, groups and boundary
+([measuring-usage.md §2](reference/measuring-usage.md#2-inspect-the-key-being-replaced--its-permissions-are-what-the-app-runs-with-today)).
+
+**3. The SDK finds credentials by itself — stop handing them over.**
 
     environment variables → ~/.aws profile → container/instance role → instance metadata
 
 Anything your code passes explicitly wins over the role. So pass nothing. And do **not** write
 "use the key if set, otherwise the role" — that branch is how a key quietly comes back later.
 
-**3. Policies come from measurement, not imagination.**
+**4. Policies come from measurement, not imagination.**
 Pick statements from [templates/policy-snippets.md](templates/policy-snippets.md) for the services
 the measurement showed — and no others. Plenty of workloads need **no policy at all**; that is a
 result, not a mistake. A denial names exactly what to add; an over-broad policy tells you nothing.
 
-**4. Verification must cover every path, not just the request path.**
+**5. Verification must cover every path, not just the request path.**
 Web requests, queue workers and scheduled jobs often share one container but run at very different
 times. A deploy-day check exercises the first and misses the rest. List the schedules
 ([hidden-dependencies.md §4](reference/hidden-dependencies.md#4-scheduled-jobs-and-background-workers-)) and make
 sure each has run under the new identity before you call the migration done.
 
-**5. Alert on denials before you narrow — not after someone notices.**
+**6. Alert on denials before you narrow — not after someone notices.**
 Wire [templates/denial-alarm.tf](templates/denial-alarm.tf) first: an `AccessDenied` for the new role
 should page within a minute, not surface the next morning as a user complaint. Rolling back a
 policy line takes seconds once you know.
 
-**6. Ship a way to check.**
+**7. Ship a way to check.**
 A diagnostics endpoint or command that prints the calling identity plus a pass/fail per service
 ([FastAPI](templates/diagnostics-fastapi.py) · [Laravel](templates/diagnostics-laravel.php)) turns
 "did it work?" into something the owning team answers without you. Add it *before* migrating.

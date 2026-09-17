@@ -36,6 +36,32 @@ done
 Then `aws iam get-access-key-last-used` per key. Sort by age: keys created years ago and still
 active are where to start. Include non-developers — analysts and PMs often hold keys too.
 
+## Step 1b — What each person's key allows, and actually uses
+
+Replacing many personal IAM users with a few SSO roles is where over-privilege is easiest to create:
+give every role the **union** of everyone's permissions and you have built administrator access for
+all.
+
+For each user with an active key, record granted vs. used
+([measuring-usage.md §2](../reference/measuring-usage.md#2-inspect-the-key-being-replaced--its-permissions-are-what-the-app-runs-with-today)):
+
+```bash
+for u in <USER> …; do
+  echo "== $u"
+  aws iam list-attached-user-policies --user-name $u --query 'AttachedPolicies[].PolicyName' --output text
+  aws iam list-groups-for-user --user-name $u --query 'Groups[].GroupName' --output text
+done
+# then Access Advisor per user: which services were used in the last 90–400 days
+```
+
+Group people by what they **used**, not by what they were granted — that grouping is your role set
+(`sso-<idp>-admin`, `-developer`, `-readonly`, maybe `-data`). Someone whose key was granted admin
+but only ever read one bucket belongs in a narrow role.
+
+Also ask each person whether their key is used by **anything other than them**: a cron job on a
+server, a script in a shared repo, a BI tool. Those consumers break the day the key is deactivated
+and need their own non-human identity first.
+
 ## Step 2 — Roles for people
 
 Name them `sso-<idp>-<role>` (no environment suffix — see

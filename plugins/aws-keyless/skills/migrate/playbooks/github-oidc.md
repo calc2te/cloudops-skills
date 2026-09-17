@@ -30,6 +30,33 @@ Find what the CI user actually does. A deploy key usually touches ECR, ECS, S3 a
 "usually" is not a policy — see [measuring-usage.md](../reference/measuring-usage.md) §2, then
 read the workflow files to confirm.
 
+## Step 1b — Read the CI user's permissions before designing the role
+
+With CI there is no attached identity to be misled by — the key's IAM user **is** today's
+permission set. It is usually the broadest key in the account and the least examined.
+
+```bash
+aws iam get-access-key-last-used --access-key-id <AKIA…> --query UserName --output text
+aws iam list-attached-user-policies --user-name <CI_USER>
+aws iam list-user-policies --user-name <CI_USER>
+aws iam list-groups-for-user --user-name <CI_USER>     # admin often arrives via a group
+```
+
+Then check **who else uses it** — the same key is commonly pasted into several repositories, a
+deploy script on a server, and someone's laptop. Access Advisor and `get-access-key-last-used` show
+usage, not consumers; ask the user, and search the organisation's workflows for the secret name.
+
+Design consequences:
+
+- One OIDC role **per repository** (and per environment), each starting from what *that* repo's
+  workflows actually do — not from the shared user's full policy.
+- If you must bridge quickly, copy the user's policy into each repo role for phase 1, then narrow
+  per repo. After the switch, CloudTrail attributes calls per repo (the role is per repo) — something
+  the shared key never allowed.
+- Do not deactivate the key until every consumer, including non-GitHub ones, has moved.
+
+See [measuring-usage.md §2](../reference/measuring-usage.md#2-inspect-the-key-being-replaced--its-permissions-are-what-the-app-runs-with-today).
+
 ## Step 2 — Identity provider and role
 
 One provider per account:
