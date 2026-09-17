@@ -91,8 +91,19 @@ Notes
 ```json
 { "Sid": "SesSend", "Effect": "Allow",
   "Action": ["ses:SendRawEmail", "ses:SendEmail"],
-  "Resource": "arn:aws:ses:<REGION>:<ACCOUNT>:identity/<DOMAIN_OR_ADDRESS>" }
+  "Resource": ["arn:aws:ses:<REGION>:<ACCOUNT>:identity/<DOMAIN_OR_ADDRESS>",
+               "arn:aws:ses:<REGION>:<ACCOUNT>:configuration-set/<CONFIG_SET>"] }
 ```
+
+🔴 **Check for a default configuration set on the identity** — SES applies it silently and
+authorises the send against it too. The app code will not mention it:
+
+```bash
+aws sesv2 get-email-identity --email-identity <DOMAIN> --query ConfigurationSetName --output text
+```
+
+`None` → drop the configuration-set line. Anything else → keep it with that name. A missed
+configuration set fails every send with `not authorized … on resource '…:configuration-set/<name>'`.
 
 Notes
 - Scope to the verified identity so a compromised app cannot send as your other domains.

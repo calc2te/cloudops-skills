@@ -67,17 +67,34 @@ for k,v in c.most_common(15): print(v,*k)"
 Migrate one environment first — the remaining traffic is then, by definition, the other one.
 Measure again at that point and the picture is clean.
 
-## 3. What CloudTrail will not show you
+## 3. Let IAM Access Analyzer draft the policy
+
+After a role has run for a while (phase 1 of a two-phase migration), Access Analyzer can generate a
+policy from that role's actual CloudTrail activity — up to 90 days.
+
+```bash
+aws accessanalyzer start-policy-generation   --policy-generation-details principalArn=<ROLE_ARN>   --cloud-trail-details '{"trails":[{"cloudTrailArn":"<TRAIL_ARN>","allRegions":true}],
+      "accessRole":"<ROLE_ALLOWING_ANALYZER_TO_READ_TRAIL>",
+      "startTime":"<ISO8601>","endTime":"<ISO8601>"}'   --query jobId --output text
+
+aws accessanalyzer get-generated-policy --job-id <JOB_ID>   --query 'generatedPolicyResult.generatedPolicies[].policy' --output text
+```
+
+Treat the output as a **draft**: it only knows management events (see §4), it tends to use `*` for
+resources you then have to fill in, and it cannot see schedules that did not run inside the window.
+Reconcile it with [hidden-dependencies.md](hidden-dependencies.md) before applying.
+
+## 4. What CloudTrail will not show you
 
 Data-plane operations are not logged by default: S3 object reads/writes, DynamoDB item operations,
-SQS message traffic. Work around it:
+SQS message traffic, **SES sending**. Work around it:
 
 - **Indirect evidence**: if a DynamoDB table is KMS-encrypted, the `Decrypt` event carries
   `encryptionContext["aws:dynamodb:tableName"]`. S3 sometimes leaves `GetBucketLocation`.
 - **Config is authoritative** for names: buckets, tables, queues and regions are in the app's
   settings, not in CloudTrail.
 
-## 4. Read the code
+## 5. Read the code
 
 ```bash
 # Python
@@ -100,7 +117,7 @@ aws ssm get-parameter --with-decryption --name <PARAM> --query Parameter.Value -
   | grep -E '^[A-Z_]+=' | sed -E 's/=(.{4}).*/=\1…/'
 ```
 
-## 5. Check which code paths are actually reachable
+## 6. Check which code paths are actually reachable
 
 Routes that exist in code but have had no traffic for a month do not need permissions yet. If the
 service fronts HTTP, the access log answers it:

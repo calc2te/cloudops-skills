@@ -6,6 +6,11 @@ container with neither a key nor a role, and the service dies.
 Prerequisites: [conventions](../reference/conventions.md) for naming and policy rules,
 [pitfalls](../reference/pitfalls.md) open beside you — every item there is a silent failure.
 
+**Decide the pace first** ([SKILL.md](../SKILL.md#choose-the-pace)). For a business-critical
+service use **two phases**: in Step 2, copy the old role's permissions instead of writing a narrow
+policy; run Steps 3–7; observe for a full schedule cycle; then come back to Step 2 and narrow, with
+[denial alarms](../templates/denial-alarm.tf) already wired.
+
 ## Step 0 — Collect the context you need
 
 Ask the user, or read it from the repo (`CLAUDE.md`, terraform, CI workflow) if it is written down:
@@ -39,7 +44,19 @@ The key technique: **an ECS task role session is named after the task ID**, so C
 split per service even while many services share one role. Combine that with the app's config
 (bucket / table / queue names) and a grep for SDK clients in the code.
 
-## Step 2 — Create the role and a narrow policy (attached to nothing yet → zero risk)
+## Step 2 — Create the role and its policy (attached to nothing yet → zero risk)
+
+**Two-phase (critical services)** — copy the permissions the workload has today, unchanged:
+
+```bash
+aws iam list-attached-role-policies --role-name <OLD_ROLE> --query 'AttachedPolicies[].PolicyArn'
+aws iam list-role-policies --role-name <OLD_ROLE>       # then get-role-policy for each
+```
+
+Attach the same managed policies and inline documents to the new role. Nothing can break for lack
+of permission. Narrowing happens later, from evidence — skip ahead to Step 3.
+
+**One step (small services)** — write the narrow policy now:
 
 Start from [terraform-role.tf](../templates/terraform-role.tf) — role and trust only — then add
 statements from [policy-snippets.md](../templates/policy-snippets.md), **one per service the
@@ -130,13 +147,25 @@ aws iam get-access-key-last-used --access-key-id <AKIA…> \
 Also grep the application logs for `AccessDenied`, `InvalidClientTokenId`, `CredentialsError`.
 A denial message names the exact action and resource — add precisely that, nothing more.
 
+**Deploy day is not the end of verification.** Queue workers and scheduled jobs usually share the
+container but run on their own clock. List them
+([hidden-dependencies.md §4](../reference/hidden-dependencies.md#4-scheduled-jobs-and-background-workers-))
+and confirm each one has run successfully under the new role — a daily job means checking tomorrow,
+a monthly one means next month. Keep the [denial alarms](../templates/denial-alarm.tf) on until then.
+
 ## Step 7 — Roll back, or finish
 
 **Roll back**: restore the previous parameter version and redeploy (~20 min). The task-definition
 change rides along with the same deploy.
 
-**Finish**: after the old key has been idle for at least a day, deactivate it (reversible), then
-delete it. Back up role/key metadata as JSON first. Record what changed and how to undo it.
+**Finish**: after the old key has been idle for **at least one full cycle of the longest scheduled
+job**, deactivate it (reversible), then delete it. Back up role/key metadata as JSON first. Record
+what changed and how to undo it.
+
+**Two-phase, phase 2**: once that cycle has passed, draft the narrow policy from evidence
+([measuring-usage.md §3](../reference/measuring-usage.md#3-let-iam-access-analyzer-draft-the-policy)),
+reconcile it with [hidden-dependencies.md](../reference/hidden-dependencies.md), apply it with alarms
+on, and watch another cycle.
 
 ## Applying this at scale
 

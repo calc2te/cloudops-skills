@@ -89,3 +89,25 @@ stale or broken, producing confusing errors that look like the migration's fault
 
 Set the profile explicitly per project (`direnv`, a shell hook, or the container's environment).
 An empty `default` is a feature: it fails immediately instead of using an unexpected identity.
+
+## 11. A permission can be invisible to both code and CloudTrail 🔴
+
+An SES identity's **default configuration set** is applied by SES, not by your code, and SES
+authorises the send against it. CloudTrail does not record SES sends. A diagnostics endpoint cannot
+responsibly exercise sending. So the one path that was guaranteed to break passed every check.
+
+It was a daily newsletter: it failed for every subscriber the morning after the migration, and was
+found hours later by a person noticing, not by an alarm.
+
+This is one instance of a category. Before narrowing permissions, run
+[hidden-dependencies.md](hidden-dependencies.md).
+
+## 12. Switching identity and narrowing permissions in one step
+
+The incident above only happened because two risks were combined: *who* the workload runs as, and
+*what* it is allowed to do. Either alone is easy to verify. Together, a failure in a rarely-run
+path looks like a success on deploy day.
+
+For anything business-critical: switch identity with the **old permissions copied**, observe for a
+full schedule cycle (monthly jobs → a month), then narrow with alarms already in place
+([denial-alarm.tf](../templates/denial-alarm.tf)). See "Choose the pace" in [SKILL.md](../SKILL.md).
