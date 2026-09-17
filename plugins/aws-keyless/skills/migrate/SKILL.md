@@ -22,6 +22,11 @@ CloudTrail. Measurement then becomes a cross-check instead of the only source.
 Look up what you can yourself (cluster, task definition, current role) instead of asking. Check
 things people rarely know (SES configuration sets, resource policies) yourself and report them.
 
+**Trace every key the app uses back to its IAM user and read that user's permissions.** If the app
+authenticates with a key, *those* are the permissions it runs with today — the attached role is
+bypassed. They are the ceiling for the new role, and the baseline for showing what the migration
+removed ([measuring-usage.md §2](reference/measuring-usage.md#2-inspect-the-key-being-replaced--its-permissions-are-what-the-app-runs-with-today)).
+
 ## Choose the pace
 
 Decide this right after the answers come back — the criticality and schedule questions settle it.

@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.4.0 — inspect the key being replaced
+
+Correction to 0.2.0. Two-phase migration said "copy the permissions the workload has today" and
+pointed at the attached task role. But when an app authenticates with a static key, the SDK uses the
+key and **the attached role is bypassed** — its policies say nothing about what the app actually
+does. The permissions in effect are the key's IAM user's.
+
+- `measuring-usage.md` §2 rewritten: resolve each key (including secondary ones like `DYNAMODB_KEY`)
+  to its IAM user; read attached, inline and group policies plus any permissions boundary; compare
+  **granted vs. used** (Access Advisor, CloudTrail); detect keys that no longer exist (the path using
+  them is already broken); handle shared keys. Table of which permissions are "in effect today".
+- `playbooks/ecs.md` Step 2 (two-phase): keep the **key user's** permissions, not the role's; union
+  if both are used; nothing for a deleted key.
+- `pitfalls.md` #13: the attached role is not necessarily what the app runs with.
+- `ask-the-user.md` / `SKILL.md`: ask whether keys are shared; trace keys to users yourself.
+
 ## 0.3.0 — ask before you dig
 
 From first use in the field: the skill spent effort reconstructing things a person could answer in

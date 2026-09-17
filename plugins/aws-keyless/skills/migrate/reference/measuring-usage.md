@@ -41,14 +41,59 @@ Reading the result:
 - An app that clearly calls AWS but shows no task-role events is authenticating some other way —
   usually a static key baked into the image.
 
-## 2. Look from the key's side
+## 2. Inspect the key being replaced — its permissions are what the app runs with today
+
+If the application authenticates with a static key, **the permissions in effect are that key's
+IAM user's**, not the task/instance role attached to the workload. The SDK uses the key first
+([pitfalls §2](pitfalls.md#2-environment-variables-beat-the-task-role-)); the attached role sits
+unused. So when you "keep today's permissions", this is the set to keep — and when you narrow, this
+is the ceiling to narrow from.
+
+Inventory **every** key the app reads, not just `AWS_ACCESS_KEY_ID`. Apps often carry a second
+pair for one service (`DYNAMODB_KEY`, `S3_KEY`, `SES_KEY`…).
+
+### 2a. Which user owns each key — and does the key still exist?
+
+Only the access key **ID** is needed (never print the secret):
 
 ```bash
-# is this key still alive, and what did it last touch?
-aws iam get-access-key-last-used --access-key-id <AKIA…> \
-  --query 'AccessKeyLastUsed.[LastUsedDate,ServiceName,Region]' --output text
+aws ssm get-parameter --with-decryption --name <PARAM> --query Parameter.Value --output text   | grep -E '^[A-Z_]*(ACCESS_KEY_ID|_KEY)=(AKIA|ASIA)' | sed -E 's/=(.{4}).{12}(.{4})/=\1…\2/'
 
-# which services has this principal used (Access Advisor, ~400 day window)
+aws iam get-access-key-last-used --access-key-id <AKIA…>   --query '[UserName,AccessKeyLastUsed.LastUsedDate,AccessKeyLastUsed.ServiceName]' --output text
+```
+
+- Returns a user → continue below.
+- **`NoSuchEntity` / `AccessDenied` for a key in your own account** → the key was deleted or belongs
+  to another account. Every call the app makes with it is **failing today**. Do not "preserve" that
+  behaviour; find the feature, tell the user, and decide what it *should* have access to.
+- `LastUsedDate` empty or months old → the path using it may be dead code, or rare. Ask.
+
+### 2b. What that user is allowed to do
+
+Permissions come from four places; check all of them.
+
+```bash
+U=<USER>
+aws iam list-attached-user-policies --user-name $U --query 'AttachedPolicies[].PolicyArn' --output text
+aws iam list-user-policies          --user-name $U --query 'PolicyNames' --output text   # then get-user-policy
+aws iam list-groups-for-user        --user-name $U --query 'Groups[].GroupName' --output text
+#   for each group: list-attached-group-policies, list-group-policies / get-group-policy
+aws iam get-user --user-name $U --query 'User.PermissionsBoundary' --output text          # caps everything above
+```
+
+Read the result for:
+
+- **`*FullAccess` or `AdministratorAccess`** — common on old app keys. Copying it to a role is not a
+  "safe phase 1"; it is moving an over-privileged credential somewhere harder to see. Copy it only
+  as a short-lived bridge, with narrowing already scheduled.
+- **Permissions for services the code never calls** — leftovers from another project or a person.
+- **Explicit `Deny` statements or a permissions boundary** — the key may be *less* capable than its
+  allow list suggests; the new role must not silently become more capable.
+
+### 2c. What that user actually used
+
+```bash
+# services and actions used (Access Advisor, ~400 day window; action-level for some services)
 JOB=$(aws iam generate-service-last-accessed-details --arn arn:aws:iam::<ACCOUNT>:user/<USER> \
         --granularity ACTION_LEVEL --query JobId --output text)
 aws iam get-service-last-accessed-details --job-id "$JOB" \
@@ -56,7 +101,7 @@ aws iam get-service-last-accessed-details --job-id "$JOB" \
 
 # the actual calls, with model / table / bucket where present
 aws cloudtrail lookup-events --region <REGION> \
-  --lookup-attributes AttributeKey=Username,AttributeValue=<IAM_USER> \
+  --lookup-attributes AttributeKey=Username,AttributeValue=<USER> \
   --start-time <ISO8601> --max-items 3000 --output json | python3 -c "
 import json,sys,collections
 c=collections.Counter()
@@ -68,9 +113,25 @@ for e in json.load(sys.stdin)['Events']:
 for k,v in c.most_common(15): print(v,*k)"
 ```
 
-**When one key is shared by prod and stage**, IP and user-agent usually cannot separate them.
-Migrate one environment first — the remaining traffic is then, by definition, the other one.
-Measure again at that point and the picture is clean.
+**Granted (2b) minus used (2c) is the over-privilege** you are about to stop carrying. Record it —
+it is the before/after number that shows the migration was worth doing.
+
+### 2d. Is the key shared?
+
+One key used by several workloads (or by prod **and** stage, or by a workload **and** a person)
+means its usage is a union. IP and user-agent usually cannot separate them. Migrate one consumer
+first — the remaining traffic is then, by definition, the others. Measure again at that point.
+
+Do not delete or deactivate a shared key until **every** consumer has moved.
+
+### Which permissions are "in effect today"?
+
+| how the app authenticates | effective permissions to keep in phase 1 |
+|---|---|
+| static key only | the key user's (2b), **not** the attached role |
+| role only (no key) | the attached role's |
+| some clients pass a key, others do not | the **union** of the key user and the attached role |
+| a key that no longer exists | none — that path is broken; decide deliberately |
 
 ## 3. Let IAM Access Analyzer draft the policy
 

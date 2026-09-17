@@ -111,3 +111,19 @@ path looks like a success on deploy day.
 For anything business-critical: switch identity with the **old permissions copied**, observe for a
 full schedule cycle (monthly jobs → a month), then narrow with alarms already in place
 ([denial-alarm.tf](../templates/denial-alarm.tf)). See "Choose the pace" in [SKILL.md](../SKILL.md).
+
+## 13. The attached role is not necessarily what the app runs with
+
+A workload can have a task role attached **and** a static key in its environment. The SDK uses the
+key; the role is never consulted. Its policies describe nothing about what the app actually does.
+
+Consequences if you trust the role:
+
+- **"Copy today's permissions"** copies the wrong set — possibly far broader (a shared admin-like
+  role) or far narrower (a role nobody maintained) than what the key allowed.
+- **Access Advisor on the role** shows no activity for services the app uses constantly.
+- **A second key for one service** (`DYNAMODB_KEY`, `S3_KEY`) can belong to a different user — or
+  to no user at all. One such key had been deleted; that feature had been failing for months.
+
+Always resolve each key to its IAM user and read *that* user's policies, groups and boundary
+([measuring-usage.md §2](measuring-usage.md#2-inspect-the-key-being-replaced--its-permissions-are-what-the-app-runs-with-today)).

@@ -9,7 +9,7 @@ away if someone tells you where the repository is.
 | | do this | examples |
 |---|---|---|
 | **only a person knows** | ask | where the code lives, how critical the service is, what the cron jobs are *for*, who approves a prod deploy |
-| **quick to look up** | look it up, don't ask | cluster and service names, current task role, task definition, attached policies |
+| **quick to look up** | look it up, don't ask | cluster and service names, current task role, task definition, **which IAM user owns each key and its policies** |
 | **people usually don't know** | check it yourself, then tell them | SES default configuration sets, resource policies naming the old user, KMS keys on buckets |
 
 **Ask once, in one batch.** Collect every question you have at the start and present them
@@ -65,12 +65,16 @@ Tells you where the task definition / role binding must change (so the next depl
 it), whether a tag lands on a merge commit ([pitfalls §6](pitfalls.md#6-tags-on-merge-commits-may-not-contain-your-change)),
 and whether you can rehearse on staging first.
 
-### 6. Where do its secrets and settings come from?
+### 6. Where do its secrets and settings come from — and is any key shared?
 
-> "Where does the app get its environment — an SSM parameter, Secrets Manager, CI variables, a file in the image?"
+> "Where does the app get its environment — an SSM parameter, Secrets Manager, CI variables, a file in the image?
+> Do you know whether any of its AWS keys are also used elsewhere — another service, staging, a person's laptop?"
 
-That is where the static key has to be removed from. It is also where the resource names
-(bucket, table, queue) are.
+The first half is where the static key has to be removed from, and where the resource names
+(bucket, table, queue) are. The second half matters because a shared key cannot be deactivated
+until every consumer has moved. Then **resolve each key's IAM user yourself** and read its policies
+([measuring-usage.md §2](measuring-usage.md#2-inspect-the-key-being-replaced--its-permissions-are-what-the-app-runs-with-today)) —
+people rarely know what a years-old key is allowed to do.
 
 ### 7. When is a safe time, and who can approve?
 
@@ -102,4 +106,5 @@ Keep it short, number the questions, give defaults, and say what you will do mea
 > 5. **Deploy**: how does it reach production, and is there a staging environment?
 > 6. **Approval**: who approves the production deploy, and is there a quiet time window?
 >
-> Meanwhile I'll look up the cluster, task definition and current role — none of that needs you.
+> Meanwhile I'll look up the cluster, task definition and current role, and trace each AWS key the
+> app uses back to its IAM user and permissions — none of that needs you.

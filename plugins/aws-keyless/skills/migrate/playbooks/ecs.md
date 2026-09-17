@@ -61,15 +61,33 @@ Report which items came from code, which from CloudTrail, and which the user con
 
 ## Step 2 — Create the role and its policy (attached to nothing yet → zero risk)
 
-**Two-phase (critical services)** — copy the permissions the workload has today, unchanged:
+**Two-phase (critical services)** — keep the permissions **in effect today**, unchanged.
+
+⚠️ "Today's permissions" are usually **not** the task role's. If the app authenticates with a static
+key, the SDK uses the key and the attached task role is bypassed — so the permissions to keep are
+the **key's IAM user's**. Work them out with
+[measuring-usage.md §2](../reference/measuring-usage.md#2-inspect-the-key-being-replaced--its-permissions-are-what-the-app-runs-with-today):
 
 ```bash
-aws iam list-attached-role-policies --role-name <OLD_ROLE> --query 'AttachedPolicies[].PolicyArn'
-aws iam list-role-policies --role-name <OLD_ROLE>       # then get-role-policy for each
+# which user owns each key the app reads (ID only — never print the secret)
+aws iam get-access-key-last-used --access-key-id <AKIA…> --query UserName --output text
+
+# that user's policies: attached, inline, and via groups
+aws iam list-attached-user-policies --user-name <USER>
+aws iam list-user-policies --user-name <USER>
+aws iam list-groups-for-user --user-name <USER>
 ```
 
-Attach the same managed policies and inline documents to the new role. Nothing can break for lack
-of permission. Narrowing happens later, from evidence — skip ahead to Step 3.
+| the app uses | keep |
+|---|---|
+| a static key | the key user's policies |
+| no key (already on the role) | the current role's policies |
+| both (some clients pass keys) | the union |
+| a key that no longer exists | nothing — that path is already broken; decide with the owner |
+
+Attach that set to the new role. Nothing can break for lack of permission. If the key user carried
+`*FullAccess`, you are only moving it somewhere with better attribution — schedule the narrowing
+now, not "later". Then skip ahead to Step 3.
 
 **One step (small services)** — write the narrow policy now:
 
