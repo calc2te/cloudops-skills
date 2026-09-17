@@ -1,7 +1,7 @@
 {
   "name": "aws-keyless",
   "description": "Replace static AWS access keys with roles. Covers ECS task roles, EC2 instance profiles, Lambda execution roles, GitHub Actions OIDC and local developer credentials — how to measure what a workload really calls, scope a narrow policy, migrate in the right order, and verify.",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "keywords": ["aws", "iam", "credentials", "security", "keyless", "ecs", "ec2", "lambda", "oidc"],
   "license": "MIT"
 }

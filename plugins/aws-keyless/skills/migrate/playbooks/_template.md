@@ -10,9 +10,11 @@ Prerequisites: [conventions](../reference/conventions.md), [pitfalls](../referen
 
 ## Step 0 — Collect the context you need
 
-> Table of what must be known before starting: account, region, profile, the resource identifier
-> for this platform (instance id / function name / repo), and **who owns the definition** — the
-> thing that would overwrite a manual change on the next deploy.
+> First: which questions from ../reference/ask-the-user.md matter most on this platform, plus any
+> platform-specific ones only a person can answer. Ask them in one batch.
+> Then: what to look up yourself — account, region, the resource identifier for this platform
+> (instance id / function name / repo), and **who owns the definition** — the thing that would
+> overwrite a manual change on the next deploy.
 
 ## Step 1 — Measure what it actually calls
 

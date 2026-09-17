@@ -9,6 +9,8 @@ Lambda always has an execution role — that is how it writes logs. So the migra
 
 ## Step 0 — Context
 
+Ask first — [ask-the-user.md](../reference/ask-the-user.md). For Lambda also ask: *which framework deploys it (Serverless, SAM, CDK, Terraform, console)?* — editing anything else is reverted by the next deploy.
+
 ```bash
 aws lambda get-function-configuration --function-name <FN> \
   --query '[Role,Runtime,Environment.Variables]' --output json

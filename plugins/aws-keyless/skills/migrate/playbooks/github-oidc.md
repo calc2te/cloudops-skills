@@ -11,6 +11,8 @@ mints a short-lived token per job and AWS exchanges it for a session.
 
 ## Step 0 — Context
 
+Ask first — [ask-the-user.md](../reference/ask-the-user.md). For CI also ask: *which repositories and branches use this key?* and *are GitHub environments with approvals in use?* — they decide the `sub` condition.
+
 ```bash
 # which workflows use static keys
 grep -rn "AWS_ACCESS_KEY_ID" .github/workflows/

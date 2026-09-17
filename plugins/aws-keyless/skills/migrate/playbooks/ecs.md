@@ -11,17 +11,24 @@ service use **two phases**: in Step 2, copy the old role's permissions instead o
 policy; run Steps 3–7; observe for a full schedule cycle; then come back to Step 2 and narrow, with
 [denial alarms](../templates/denial-alarm.tf) already wired.
 
-## Step 0 — Collect the context you need
+## Step 0 — Ask, then look up
 
-Ask the user, or read it from the repo (`CLAUDE.md`, terraform, CI workflow) if it is written down:
+**Ask the user first**, in one message — the questions and a ready-made opening are in
+[ask-the-user.md](../reference/ask-the-user.md). For ECS the answers that change the most:
 
-| Needed | Example | Why |
-|---|---|---|
-| AWS account id, region | `123456789012`, `ap-northeast-2` | every ARN |
-| CLI profile | `--profile acme-prod` | all commands below |
-| Cluster / service | `myapp-stage` / `api` | the target |
-| Role path prefix | `/acme/` (optional) | separates human-made roles from auto-generated ones |
-| Naming convention | `ecs-<task-def>-<env>` | see conventions.md |
+- **Where is the app's code?** → scan it in Step 1 before touching CloudTrail.
+- **How critical is it / what runs on a schedule?** → one step or two phases, and how long to observe.
+- **How does it deploy, and where does its `.env` come from?** → where the role binding and the key live.
+
+Skip anything already written in the repo (`CLAUDE.md`, CI workflow, Terraform). Then collect the
+rest yourself — none of this needs the user:
+
+| Needed | How |
+|---|---|
+| AWS account id, region, CLI profile | repo `CLAUDE.md`, or ask once if absent |
+| Cluster / service | `aws ecs list-services --cluster <CLUSTER>` |
+| Current task role and its policies | `describe-task-definition`, `list-attached-role-policies` |
+| Role path prefix and naming | [conventions.md](../reference/conventions.md) or the repo's own standard |
 
 Then find **who owns the task definition** — this decides where the change goes:
 
@@ -36,13 +43,21 @@ aws ecs describe-task-definition --task-definition <ARN> \
   Console or CLI edits are erased by the next deploy.
 - Managed by Terraform/CDK → edit that code.
 
-## Step 1 — Measure what the service actually calls
+## Step 1 — Find what the service actually calls
 
-Never guess the policy. See [measuring-usage.md](../reference/measuring-usage.md).
+Never guess the policy. In this order:
 
-The key technique: **an ECS task role session is named after the task ID**, so CloudTrail can be
-split per service even while many services share one role. Combine that with the app's config
-(bucket / table / queue names) and a grep for SDK clients in the code.
+1. **The code, if the user gave you access.** SDK clients, framework integrations (storage disks,
+   queue and mail drivers), config keys, and schedules. This finds rare paths that measurement
+   cannot. See [measuring-usage.md §5](../reference/measuring-usage.md#5-read-the-code).
+2. **CloudTrail, split per task.** An ECS task role session is named after the task ID, so calls
+   can be attributed to one service even while many share a role — use it to confirm the code
+   reading and catch anything the code hides (dynamic client creation, libraries).
+3. **Config values** for the real resource names (bucket, table, queue), from wherever the
+   environment comes from.
+4. **[hidden-dependencies.md](../reference/hidden-dependencies.md)** for what neither shows.
+
+Report which items came from code, which from CloudTrail, and which the user confirmed.
 
 ## Step 2 — Create the role and its policy (attached to nothing yet → zero risk)
 

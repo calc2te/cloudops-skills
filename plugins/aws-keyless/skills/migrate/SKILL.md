@@ -9,9 +9,23 @@ Every AWS compute platform can authenticate without a long-lived key. The hard p
 everywhere: nobody knows what the workload actually calls, a shared role cannot be narrowed safely,
 and one wrong step takes production down.
 
+## Start by asking
+
+Before measuring anything, ask the user the questions in
+[reference/ask-the-user.md](reference/ask-the-user.md) — **in one batch**, each with a reason and a
+default. A person answers in seconds what takes half an hour to infer.
+
+The most valuable one: **"Is the application code available?"** If it is, scan it first — it names
+every AWS client, bucket, table, queue and scheduled job, including paths too rare to appear in
+CloudTrail. Measurement then becomes a cross-check instead of the only source.
+
+Look up what you can yourself (cluster, task definition, current role) instead of asking. Check
+things people rarely know (SES configuration sets, resource policies) yourself and report them.
+
 ## Choose the pace
 
-Decide this **first**. Getting it wrong is how a careful migration still breaks production.
+Decide this right after the answers come back — the criticality and schedule questions settle it.
+Getting it wrong is how a careful migration still breaks production.
 
 | | **One step** | **Two phases** |
 |---|---|---|
@@ -48,6 +62,8 @@ purpose.
 
 ## Read these first, whatever the platform
 
+- [reference/ask-the-user.md](reference/ask-the-user.md) — what to ask up front, what to look up
+  instead, and a ready-made opening message.
 - [reference/conventions.md](reference/conventions.md) — role paths, naming, policy rules, and the
   action mappings people get wrong.
 - [reference/pitfalls.md](reference/pitfalls.md) — failures that happen **silently**.

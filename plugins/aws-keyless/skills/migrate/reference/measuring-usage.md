@@ -4,6 +4,11 @@ The policy is `actions the code performs` × `resource names from config and mea
 Guessing produces either an outage or a policy nobody can defend. All commands below take your
 usual `--profile` / `--region`.
 
+**Source priority**: ask for the code first ([ask-the-user.md](ask-the-user.md)). If you have it,
+§5 is your primary source and the CloudTrail sections below are the cross-check. If you do not,
+CloudTrail is all you have — say so in the result, because rare paths (monthly jobs, admin-only
+features) will be missing.
+
 ## 1. Split CloudTrail per service (works even with a shared role)
 
 An ECS task role session is named after the **task ID**. So even when twenty services share one

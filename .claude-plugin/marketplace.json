@@ -9,7 +9,7 @@
       "name": "aws-keyless",
       "source": "./plugins/aws-keyless",
       "description": "Replace static AWS access keys with roles — ECS, EC2, Lambda, CI, and local development",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "category": "Infrastructure",
       "keywords": ["aws", "iam", "credentials", "security", "keyless", "ecs", "oidc"]
     }

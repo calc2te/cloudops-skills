@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.3.0 — ask before you dig
+
+From first use in the field: the skill spent effort reconstructing things a person could answer in
+seconds — above all, *where the code is*. Scanning the code finds rare paths CloudTrail never shows.
+
+- **New** `reference/ask-the-user.md`: what only a person knows (code location, criticality,
+  schedules, user-facing features, deploy path, approver), what to look up instead, and what to
+  check yourself because people rarely know it. Ask once, in one batch, with defaults.
+- `SKILL.md`: new **Start by asking** step before choosing the pace.
+- Code is now the **primary** source of what a workload calls; CloudTrail is the cross-check
+  (`measuring-usage.md`, `playbooks/ecs.md` Step 1). Results must say what was measured vs. confirmed.
+- Every playbook's Step 0 starts with the platform-specific questions to ask.
+
 ## 0.2.0 — two-phase migrations and hidden dependencies
 
 Learned from a production incident: a one-step migration passed every deploy-day check, and the

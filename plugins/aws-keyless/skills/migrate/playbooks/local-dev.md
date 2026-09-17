@@ -11,6 +11,8 @@ the rule from [SKILL.md](../SKILL.md) — pass nothing, let the SDK resolve.
 
 ## Step 0 — Pick the mechanism
 
+Ask first — [ask-the-user.md](../reference/ask-the-user.md). For laptops also ask: *is the account in an AWS Organization you control?* and *which identity provider does the company use?* — they decide Identity Center vs. SAML.
+
 | Situation | Use |
 |---|---|
 | AWS Organizations available | **IAM Identity Center** + `aws sso login` — first choice, no extra tooling |

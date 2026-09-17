@@ -7,6 +7,8 @@ Prerequisites: [conventions](../reference/conventions.md), [pitfalls](../referen
 
 ## Step 0 — Context
 
+Ask first — [ask-the-user.md](../reference/ask-the-user.md). For EC2 also ask: *is the instance hand-built, or in an Auto Scaling group / launch template?* and *which OS users run the app?* (keys hide in their home directories).
+
 | Needed | How to get it |
 |---|---|
 | instance id(s) | `aws ec2 describe-instances --filters Name=tag:Name,Values=<NAME> --query 'Reservations[].Instances[].[InstanceId,IamInstanceProfile.Arn]' --output text` |
