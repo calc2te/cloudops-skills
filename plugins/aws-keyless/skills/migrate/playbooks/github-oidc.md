@@ -105,7 +105,7 @@ GROUP BY 1, 2 ORDER BY n DESC
 Seen in practice:
 
 - One "backend" CI key was shared by **five** repositories, deploying four different products.
-- A user named `github-ecs-action` was not CI at all — a running container used it a million
+- A user with "github" in its name was not CI at all — a running container used it a million
   times a month. **Names lie; the user agent and source address do not.**
 - Two keys for repositories already moved to OIDC were still active weeks later — one of them in
   the administrators group. Disabling leftovers is the cheapest win in this whole exercise.
