@@ -59,7 +59,7 @@ When unsure, choose two phases. The cost is a month of patience; the saving is a
 | ECS service (`.env` in the image, task definition env vars) | task role | [playbooks/ecs.md](playbooks/ecs.md) ← battle-tested |
 | EC2 instance (userdata, `~/.aws`, app config) | instance profile | [playbooks/ec2.md](playbooks/ec2.md) |
 | Lambda function (env vars) | execution role | [playbooks/lambda.md](playbooks/lambda.md) |
-| GitHub Actions (`secrets.AWS_ACCESS_KEY_ID`) | OIDC federation | [playbooks/github-oidc.md](playbooks/github-oidc.md) |
+| GitHub Actions (`secrets.AWS_ACCESS_KEY_ID`) | OIDC federation | [playbooks/github-oidc.md](playbooks/github-oidc.md) ← field-tested; has a quick path for repository owners |
 | Developer laptop (`~/.aws/credentials` static key) | SSO / SAML short-lived session | [playbooks/local-dev.md](playbooks/local-dev.md) |
 
 Adding a platform? Copy [playbooks/_template.md](playbooks/_template.md) — the shape is fixed on

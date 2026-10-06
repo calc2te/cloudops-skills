@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.5.0 — GitHub OIDC, from the field
+
+The GitHub Actions playbook was derived from documentation. It has now been run end to end on
+several repositories (ECR push, rolling and CodeDeploy ECS deploys, SSM reads), and rewritten from
+what actually happened.
+
+- `playbooks/github-oidc.md`:
+  - **Quick path for repository owners** — the admin creates the role, the repository owner only
+    edits the workflow. Self-contained so it can be handed to someone without IAM access.
+  - Finding consumers: secret values are unreadable, so map keys to repositories through what they
+    touched (ECR repository, ECS service, SSM parameter) and GitHub-runner user agents. Org-wide code
+    search misses private repositories — read the workflow files.
+  - Roles **per repository and environment, not per branch**; trust lists exact deploy branches.
+  - Permission table for deploy workflows, including CodeDeploy services (no `ecs:UpdateService`)
+    and `aws/ssm` (no KMS statement).
+  - Verify with the policy simulator in both directions — stage must be denied production.
+  - FAQ: the role ARN is not a secret; what the real boundary is; repo-jacking.
+  - Cost attribution: every session is `GitHubActions` — group by role name.
+- `pitfalls.md` #14: zsh `$VAR:r` modifiers corrupt ARNs built in shell scripts.
+
 ## 0.4.1 — the same check on every platform
 
 0.4.0 fixed the ECS playbook only. The problem is general: whatever identity is attached, a key can

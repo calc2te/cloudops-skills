@@ -127,3 +127,14 @@ Consequences if you trust the role:
 
 Always resolve each key to its IAM user and read *that* user's policies, groups and boundary
 ([measuring-usage.md §2](measuring-usage.md#2-inspect-the-key-being-replaced--its-permissions-are-what-the-app-runs-with-today)).
+
+## 14. zsh rewrites `$VAR:r…` inside ARNs
+
+In zsh, `:r`, `:h`, `:t`, `:e`, `:a`, `:l`, `:u` after a variable name are **modifiers**, not text.
+`"arn:aws:iam::$ACCOUNT:role/x"` becomes `arn:aws:iam::123456789012ole/x` — `:r` stripped an
+"extension" and ate the `r`. It happened twice in one session: once only in log output, once in
+the ARN passed to the IAM policy simulator (`Invalid ARN`). In a trust or permission policy it
+would silently produce a principal that never matches.
+
+Always brace variables that are followed by a colon: `"arn:aws:iam::${ACCOUNT}:role/x"`. Or build
+policy JSON in Python/`jq`, not by string interpolation in the shell.
