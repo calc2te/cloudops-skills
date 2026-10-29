@@ -1,5 +1,21 @@
 # Changelog
 
+# aws-terraform-standards
+
+## 0.1.0 — first release
+
+Extracted from the naming, tagging, security group and IAM role standards of a production account,
+and from building a new ECS environment (three environments, one module set) to them in Terraform.
+
+- `SKILL.md`: 12 rules in short, organisation values read from `CLAUDE.md`, a plan checklist.
+- `reference/`: naming (service ID, templates, length limits), tagging (required tags, `Service`
+  values, where `default_tags` does not reach), security groups (tiers, 6 rules, Terraform shape),
+  IAM roles (path, names, permissions, trust), configuration block, 15 pitfalls.
+- `templates/`: `providers.tf`, `ecs-service.tf`, `security-groups.tf` — pass `terraform validate`
+  with AWS provider 6.x.
+
+# aws-keyless
+
 ## 0.5.0 — GitHub OIDC, from the field
 
 The GitHub Actions playbook was derived from documentation. It has now been run end to end on

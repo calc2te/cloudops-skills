@@ -3,15 +3,39 @@
   "owner": {
     "name": "cloudops-skills contributors"
   },
-  "description": "Practical cloud governance skills for Claude Code — credential hygiene, IAM, cost attribution",
+  "description": "Practical cloud governance skills for Claude Code — credential hygiene, IAM, naming and tagging standards, cost attribution",
   "plugins": [
     {
       "name": "aws-keyless",
       "source": "./plugins/aws-keyless",
       "description": "Replace static AWS access keys with roles — ECS, EC2, Lambda, CI, and local development",
-      "version": "0.4.1",
+      "version": "0.5.0",
       "category": "Infrastructure",
-      "keywords": ["aws", "iam", "credentials", "security", "keyless", "ecs", "oidc"]
+      "keywords": [
+        "aws",
+        "iam",
+        "credentials",
+        "security",
+        "keyless",
+        "ecs",
+        "oidc"
+      ]
+    },
+    {
+      "name": "aws-terraform-standards",
+      "source": "./plugins/aws-terraform-standards",
+      "description": "Write AWS Terraform to one naming, tagging, security group and IAM role standard — and catch the plan changes that break it",
+      "version": "0.1.0",
+      "category": "Infrastructure",
+      "keywords": [
+        "aws",
+        "terraform",
+        "naming",
+        "tagging",
+        "security-group",
+        "iam",
+        "finops"
+      ]
     }
   ]
 }

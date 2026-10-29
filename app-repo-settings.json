@@ -9,6 +9,7 @@
     }
   },
   "enabledPlugins": {
-    "aws-keyless@cloudops-skills": true
+    "aws-keyless@cloudops-skills": true,
+    "aws-terraform-standards@cloudops-skills": true
   }
 }
