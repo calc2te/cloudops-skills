@@ -2,6 +2,18 @@
 
 # aws-terraform-standards
 
+## 0.2.0 — security baseline
+
+A new project created in one day produced 13 new Security Hub findings, all settings that are cheap
+at birth and expensive later. They are now part of the standard.
+
+- `reference/security-baseline.md`: 6 rules, each mapped to its Security Hub control — public Lambda
+  function URLs (verify, cap concurrency, `Exposure` tag), no public IP for ECS tasks and task sets,
+  read-only root / non-root user / logging for containers, immutable ECR tags + lifecycle, TLS-only /
+  logging / lifecycle for S3 including the Terraform state bucket, secret rotation or a written
+  reason. Each rule has a "breaks" line; field-tested status is stated per rule.
+- `SKILL.md`: rules 13–16 in short, one plan-checklist line linking to the full list.
+
 ## 0.1.0 — first release
 
 Extracted from the naming, tagging, security group and IAM role standards of a production account,

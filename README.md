@@ -5,7 +5,7 @@ Claude Code skills for cloud governance work that nobody has time for.
 | plugin | what it does |
 |---|---|
 | **[aws-keyless](plugins/aws-keyless)** | replace static AWS access keys with roles and short-lived credentials, across ECS, EC2, Lambda, CI and developer laptops |
-| **[aws-terraform-standards](plugins/aws-terraform-standards)** | write AWS Terraform to one naming, tagging, security group and IAM role standard, and catch the plan changes that silently break it |
+| **[aws-terraform-standards](plugins/aws-terraform-standards)** | write AWS Terraform to one naming, tagging, security group and IAM role standard and a Security Hub baseline, and catch the plan changes that silently break it |
 
 ```
 /plugin marketplace add calc2te/cloudops-skills
@@ -47,7 +47,7 @@ never reaches Fargate tasks, a 33-character target group name passes `plan`.
 
 The plugin puts both where the code is written: one service ID per deployable unit, every name and
 tag generated from it, tier-based security groups, one role per workload — and a plan checklist for
-the failures that do not raise an error. Organisation values (products, tag value lists, IAM path)
+the failures that do not raise an error. A security baseline maps six settings (public Lambda URLs, ECS public IPs and container hardening, ECR, S3, secrets) to the Security Hub controls that flag them, so new resources are born passing. Organisation values (products, tag value lists, IAM path)
 are read from the repository's `CLAUDE.md`, not baked in.
 
 ## Structure
@@ -138,6 +138,7 @@ MIT — see [LICENSE](LICENSE).
 - **서비스 ID 하나에서 모든 이름과 태그를 만든다.** `<제품>-<배포 단위>`(리포 이름 기준), 환경은 prod 까지 항상 명시.
 - **태그는 코드가 갖는다.** `default_tags` 에 Project·Team·Environment, 리소스마다 Service. ECS 태스크·ASG 볼륨은 따로 전파해야 한다.
 - **보안그룹은 포트가 아니라 계층(edge/app/data/client)으로.** 인터넷은 edge 만, data 는 아웃바운드 없음.
+- **Security Hub 기준선.** 공개 Lambda URL(서명 검증·동시성 상한·`Exposure` 태그), ECS 공용 IP 금지·컨테이너 읽기 전용 루트·non-root·로그, ECR 태그 불변·수명 주기, S3(테라폼 상태 버킷 포함) TLS·로그·수명 주기, 시크릿 로테이션 또는 사유 — 규칙마다 통제 ID 표기.
 - **plan 점검표** — 이름 변경이 곧 교체, 기본 egress 제거, 길이 제한 등 에러 없이 깨지는 것들.
 - 회사 고유 값(제품·태그 값 목록·IAM 경로)은 리포 `CLAUDE.md` 에서 읽는다.
 

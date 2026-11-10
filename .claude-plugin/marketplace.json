@@ -24,8 +24,8 @@
     {
       "name": "aws-terraform-standards",
       "source": "./plugins/aws-terraform-standards",
-      "description": "Write AWS Terraform to one naming, tagging, security group and IAM role standard — and catch the plan changes that break it",
-      "version": "0.1.0",
+      "description": "Write AWS Terraform to one naming, tagging, security group and IAM role standard and a Security Hub baseline — and catch the plan changes that break it",
+      "version": "0.2.0",
       "category": "Infrastructure",
       "keywords": [
         "aws",
@@ -34,7 +34,8 @@
         "tagging",
         "security-group",
         "iam",
-        "finops"
+        "finops",
+        "security-hub"
       ]
     }
   ]

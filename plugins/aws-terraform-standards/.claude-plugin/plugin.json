@@ -1,7 +1,7 @@
 {
   "name": "aws-terraform-standards",
-  "description": "Write AWS Terraform that follows one naming, tagging, security group and IAM role standard — service IDs, generated resource names, cost-allocation tags in code, tier-based security groups, one role per workload — plus the Terraform behaviours that break those rules silently.",
-  "version": "0.1.0",
+  "description": "Write AWS Terraform that follows one naming, tagging, security group and IAM role standard and a Security Hub baseline — service IDs, generated resource names, cost-allocation tags in code, tier-based security groups, one role per workload — plus the Terraform behaviours that break those rules silently.",
+  "version": "0.2.0",
   "keywords": [
     "aws",
     "terraform",
@@ -10,7 +10,10 @@
     "security-group",
     "iam",
     "finops",
-    "governance"
+    "governance",
+    "security-hub",
+    "lambda",
+    "ecs"
   ],
   "license": "MIT"
 }

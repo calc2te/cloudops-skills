@@ -1,11 +1,11 @@
 ---
 name: standards
-description: Apply an AWS naming, tagging, security group and IAM role standard while writing or reviewing Terraform. Use when creating or changing AWS resources in Terraform (ECS services, ALBs, target groups, security groups, IAM roles, log groups, ECR, S3, RDS, ElastiCache, SQS), naming a new service, setting provider default_tags, deciding which security group may reach which, or reviewing a terraform plan for standard violations. Also covers Terraform behaviours that silently break these rules — forced replacement of immutable names, removed default egress, tags reverted by the next apply.
+description: Apply an AWS naming, tagging, security group, IAM role and security baseline standard while writing or reviewing Terraform. Use when creating or changing AWS resources in Terraform (ECS services, ALBs, target groups, security groups, IAM roles, log groups, ECR, S3, RDS, ElastiCache, SQS), naming a new service, setting provider default_tags, deciding which security group may reach which, exposing a Lambda function URL or webhook, setting ECS task definitions, ECR repositories, S3 buckets (including Terraform state) or Secrets Manager secrets so AWS Security Hub does not flag them, or reviewing a terraform plan for standard violations. Also covers Terraform behaviours that silently break these rules — forced replacement of immutable names, removed default egress, tags reverted by the next apply.
 ---
 
 # AWS Terraform standards
 
-Four standards, one idea: **pick one service ID per deployable unit, and let code generate every
+Four standards and a security baseline. The standards share one idea: **pick one service ID per deployable unit, and let code generate every
 name and tag from it.** People who name resources one by one drift apart; a resource that is born
 with its tags never needs a tagging campaign.
 
@@ -59,6 +59,17 @@ block is in [reference/configuration.md](reference/configuration.md).
     observed `AccessDenied`. Trust policies carry `aws:SourceAccount` (services) or a `sub` condition
     (OIDC).
 
+**Security baseline** — [reference/security-baseline.md](reference/security-baseline.md) · each rule
+names the Security Hub control it satisfies
+13. Lambda function URL with `authorization_type = "NONE"` only for webhooks — and then verify the
+    sender in code, set `reserved_concurrent_executions`, tag `Exposure = "public"` + reason.
+14. ECS: `assign_public_ip = false`; containers with `readonlyRootFilesystem = true`, an explicit
+    non-root `user`, and `logConfiguration`. Test read-only root in QA first — it breaks apps that
+    write outside mounted volumes.
+15. ECR: `IMMUTABLE` tags (deploy by commit SHA, not `:latest`) and a lifecycle policy.
+16. New S3 buckets, the Terraform state bucket first: TLS-only policy, access logging, lifecycle.
+    Secrets: rotation, or a `description` that says why not and who owns it.
+
 ## Before you finish: check the plan
 
 Run `terraform plan` and read it for these, in order of how much they hurt:
@@ -72,6 +83,9 @@ Run `terraform plan` and read it for these, in order of how much they hurt:
 - [ ] A policy with `Resource = "*"` that is not a documented exception
       ([iam-roles.md §exceptions](reference/iam-roles.md#exceptions-where--is-the-only-option)).
 - [ ] Names longer than the limit (ALB/TG 32, IAM role 64) — plan passes, apply fails.
+- [ ] A new public Lambda URL, public ECS IP, container without read-only root / user / logging,
+      mutable ECR repository, bucket without TLS-only policy, or secret without rotation or reason —
+      full list in [security-baseline.md §plan checklist](reference/security-baseline.md#plan-checklist-additions).
 
 [reference/pitfalls.md](reference/pitfalls.md) explains each of these and the rest of the silent
 failures.
